@@ -303,9 +303,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3802c00850ecbf44da90e49df9fff6c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  diceOneRollValue: 2
-  diceTwoRollValue: 2
-  simulationFrameLenght: 200
+  simulationFrameLenght: 400
 --- !u!1 &324695976
 GameObject:
   m_ObjectHideFlags: 0
