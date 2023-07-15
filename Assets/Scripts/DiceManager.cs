@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
 
 
@@ -17,8 +18,10 @@ using Random = UnityEngine.Random;
         private Vector3 torque;
         
 
-        [SerializeField] private int simulationFrameLenght = 50;
+        [SerializeField] private int simulationFrameLength = 50;
+        [SerializeField] private int optimizationCount = 2;
         private Dictionary<int, List<TransformData>> diceAnimationData = new Dictionary<int, List<TransformData>>();
+        [SerializeField] private List<TransformData> listShower;
 
         private void Awake()
         {
@@ -31,6 +34,16 @@ using Random = UnityEngine.Random;
                 Instance = this;
             }
         }
+
+#if UNITY_EDITOR
+        private void OnValidate()
+        {
+            if (simulationFrameLength % optimizationCount != 0)
+            {
+                Debug.LogError("Frame Length must divide optimization count");
+            }
+        }
+#endif
 
         private void Start()
         {
@@ -48,15 +61,16 @@ using Random = UnityEngine.Random;
                 diceAnimationData.Add(i, new List<TransformData>());
             }
 
+            listShower = diceAnimationData[0];
         }
 
-        public void SimulateThrow(int dice1Value, int dice2Value)
+        public void SimulateThrow(params int[] diceValues)
         {
             Physics.autoSimulation = false;
             SetInitialState();
             ClearAnimationData();
             RecordAnimation();
-            RotateDices(dice1Value,dice2Value);
+            RotateDices(diceValues);
             Physics.autoSimulation = true;
             StartCoroutine(PlayAnimation());
         }
@@ -114,18 +128,44 @@ using Random = UnityEngine.Random;
 
         private void RecordAnimation()
         {
-            for (int i = 0; i <= simulationFrameLenght; i++)
+            for (int i = 0; i <= simulationFrameLength / optimizationCount; i++)
             {
                 for (int j = 0; j < Dices.Count; j++)
                 {
                     diceAnimationData[j].Add(new TransformData(Dices[j].position, Dices[j].rotation));
                 }
-                Physics.Simulate(Time.fixedDeltaTime);
+                Physics.Simulate(Time.fixedDeltaTime * optimizationCount);
             }
+
+            for (int j = 0; j < Dices.Count; j++)
+            {
+                var tempList = new List<TransformData>(simulationFrameLength);
+                tempList.Add(diceAnimationData[j][0]);
+                
+                for (int i = 1; i < diceAnimationData[j].Count; i++)
+                {
+                    var nextTransformData = diceAnimationData[j][i];
+
+                    for (int k = 1; k < optimizationCount; k++)
+                    {
+                        tempList.Add(new TransformData(
+                            Vector3.Lerp(diceAnimationData[j][i - 1].position, nextTransformData.position, (float)k / optimizationCount),
+                            Quaternion.Lerp(diceAnimationData[j][i - 1].rotation, nextTransformData.rotation, (float)k / optimizationCount)));
+                    }
+
+                    tempList.Add(nextTransformData);
+                }
+
+                diceAnimationData[j] = tempList;
+                
+                listShower = tempList;
+            }
+
+            
         }
         private IEnumerator PlayAnimation()
         {
-            for (int i = 0; i <= simulationFrameLenght; i++)
+            for (int i = 0; i <= simulationFrameLength; i++)
             {
                 for (int j = 0; j < Dices.Count; j++)
                 {
@@ -148,13 +188,16 @@ using Random = UnityEngine.Random;
             }
         }
 
-        private void RotateDices(int dice1Value, int dice2Value)
+        private void RotateDices(params int[] diceValues)
         {
-            Dices[0].GetComponent<Dice>().RotateDice(dice1Value);
-            Dices[1].GetComponent<Dice>().RotateDice(dice2Value);
+            for (var i = 0; i < diceValues.Length; i++)
+            {
+                var diceValue = diceValues[i];
+                Dices[i].GetComponent<Dice>().RotateDice(diceValue);
+            }
         }
     }
-
+[System.Serializable]
     class TransformData
     {
         public Vector3 position;
