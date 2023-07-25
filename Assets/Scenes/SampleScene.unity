@@ -303,7 +303,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3802c00850ecbf44da90e49df9fff6c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  simulationFrameLenght: 400
+  simulationFrameLength: 300
+  optimizationCount: 3
+  listShower: []
 --- !u!1 &324695976
 GameObject:
   m_ObjectHideFlags: 0
